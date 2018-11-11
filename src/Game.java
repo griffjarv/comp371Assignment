@@ -1,4 +1,6 @@
+import java.awt.Point;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Creates a new Fortress Defence Game consisting of a Map, Fortress,
@@ -14,28 +16,43 @@ public class Game {
     private static final int TANK_CELLS = 4;
     private static final int INITIAL_FORTRESS_STRENGTH = 1500;
 
-    public static final int HIT_A_TANK = -1;
-
 //    Following characters represent state of each cell on Map
     private static final char EMPTY = ' ';
     private static final char FOG = '~';
     private static final char SHOT_A_TANK = 'X';
+    private static final char IS_TANK = 'T';
     private static final char MISSED_A_SHOT = '.';
 
 //    Variables
-    private Map gameMap;
+    private Map gameMap;    // a map keeping track of where shots were by user
+    private Map tanksMap;   // a map only knowing tank locations
     private Fortress fortress;
+
     private ArrayList<Tank> siegeTanks;
 
     private boolean playerTurn;
     private boolean gameFinished;
 
-    public boolean isFortressStanding() {
-        return (fortress.strength() <= 0);
+//    Constructor
+    Game(int fortressStrength, int gridSize) {
+        this.gameFinished = false; // Can't be true when game just started
+        this.playerTurn = true;    // Player is given the first turn
+
+        this.fortress = new Fortress(INITIAL_FORTRESS_STRENGTH);
+        this.gameMap = new Map(gridSize);
+        this.siegeTanks = new ArrayList<>();
     }
 
-    public boolean anyTanksAlive() {
-        return (siegeTanks.size() > 0);
+    public void addSiegeTank(int totalCells, ArrayList<Point> coords, HashMap<Integer, Integer> damageWithCells) throws Exception {
+        siegeTanks.add(new Tank(totalCells, coords, damageWithCells));
+    }
+
+    public boolean isFortressStanding() {
+        return fortress.isStanding();
+    }
+
+    public boolean stillSomeTankStanding() {
+        return (!(siegeTanks.isEmpty()));
     }
 
     public boolean isPlayerTurn() {
@@ -54,60 +71,88 @@ public class Game {
         this.gameFinished = gameFinished;
     }
 
-    public int makeMove(String[] coords) {
+    public boolean makePlayerMove(Point coords) {
+        boolean hit = false;
+
         if (!(gameFinished)) {
-            int damage = 0;
 
             if (playerTurn) {
-                fireResult = fireAt(coords);
-                update tankcells if hit a tank;
-                update gameMap;
-                if (fortress.strength <= 0) {
-                    gameFinished = true;
-                }
-                if (hit a tank) {
-                    return HIT_A_TANK;
-                }
-                playerTurn = false;
-            }
-            else {
+
                 for (Tank tank : siegeTanks) {
-                    damage += tank.getDamageOutput();
+                    hit = tank.destroyCell(coords);
+
+                    if (hit) {
+
+                        if (!(tank.isStanding())) {
+                            siegeTanks.remove(tank);
+
+                            if (siegeTanks.isEmpty()) {
+                                gameFinished = true;
+                            }
+                        }
+
+                        gameMap.setCharAt(coords.x, coords.y, SHOT_A_TANK);
+                        playerTurn = false;
+                        return hit;
+                    }
                 }
-                if (damage == 0) {
-                    gameFinished = true;
-                }
-                fortress.updateStrength(fortress.strength - damage);
-                playerTurn = true;
             }
 
-            return damage;
+            playerTurn = false;
         }
+        return false;
+    }
+
+    public int makeEnemyMove() {
+        int damage = 0;
+
+        if (!(gameFinished)) {
+
+            if (!(playerTurn)) {
+
+                if (siegeTanks.isEmpty()) {
+                    gameFinished = true;
+                    return damage;
+                }
+
+                for (Tank tank : siegeTanks) {
+                    if (tank.isStanding()) {
+                        damage += tank.getDamageOutput();
+                    }
+                    else {
+                        siegeTanks.remove(tank);
+                    }
+                }
+
+                fortress.subtractStrength(damage);
+                if (!(fortress.isStanding())) {
+                    gameFinished = true;
+                }
+            }
+
+            playerTurn = true;
+        }
+        return damage;
     }
 
     public Map finalMap() {
-        Map finalMap = gameMap;
-        // remove fog from this finalMap
-        return finalMap;
-    }
-
-//    Constructor
-    Game() {
-        this.gameMap = new Map(SQUARE_MAP_GRID_SIZE);
-        placeTanksOnMap(NUM_OF_TANKS);
-        this.fortress = new Fortress(INITIAL_FORTRESS_STRENGTH);
-        this.gameFinished = false; // Can't be true when game just started
-        this.playerTurn = true;    // Player is given the first turn
-
-    }
-
-    private void placeTanksOnMap(int numOfTanks) {
-        for (int i=0; i<numOfTanks; i++) {
-            this.siegeTanks.add(new Tank(randomTankCoordinates(TANK_CELLS)));
+        for (int i=0; i<gameMap.size(); i++) {
+            for (int j=0; j<gameMap.size(); j++) {
+                // Order of following statements matters!
+                if (Character.compare(gameMap.getCharAt(i, j), SHOT_A_TANK) == 0) {
+                    continue;
+                }
+                else if (Character.compare(gameMap.getCharAt(i, j), MISSED_A_SHOT) == 0) {
+                    continue;
+                }
+                else if (Character.compare(tanksMap.getCharAt(i, j), IS_TANK) == 0) {
+                    gameMap.setCharAt(i, j, IS_TANK);
+                }
+                else if (Character.compare(gameMap.getCharAt(i, j), FOG) == 0) {
+                    gameMap.setCharAt(i, j, EMPTY);
+                }
+            }
         }
+        return gameMap;
     }
-
-    private Map randomTankCoordinates(int tankCells) {
-    }
-
 }
