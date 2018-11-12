@@ -73,10 +73,6 @@ public class Game {
         return gameMap;
     }
 
-    public Grid getTanksMap() {
-        return tanksMap;
-    }
-
     public int getFortressStrength() {
         return fortress.getStrength();
     }
@@ -156,8 +152,8 @@ public class Game {
     }
 
     public Grid getFinalMap() {
-        for (int i=0; i<gameMap.size(); i++) {
-            for (int j=0; j<gameMap.size(); j++) {
+        for (int i=0; i<gameMap.getSize(); i++) {
+            for (int j=0; j<gameMap.getSize(); j++) {
 
                 boolean isTank = false;
                 for (Tank t : siegeTanks) {
@@ -170,19 +166,20 @@ public class Game {
                 }
 
                 // Order of following statements matters!
-                if (Character.compare(gameMap.getCharAt(i, j), SHOT_A_TANK) == 0) {
+                if ((gameMap.getCharAt(i, j).equals(SHOT_A_TANK))) {
                     continue;
                 }
-                else if (Character.compare(gameMap.getCharAt(i, j), MISSED_A_SHOT) == 0) {
+                else if ((gameMap.getCharAt(i, j).equals(MISSED_A_SHOT))) {
                     continue;
                 }
                 else if (isTank) {
                     gameMap.setCharAt(i, j, IS_TANK);
                 }
-                else if (Character.compare(gameMap.getCharAt(i, j), FOG) == 0) {
+                else if ((gameMap.getCharAt(i, j).equals(FOG))) {
                     gameMap.setCharAt(i, j, EMPTY);
                 }
             }
+            System.out.println();
         }
         return gameMap;
     }
